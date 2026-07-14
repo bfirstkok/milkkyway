@@ -300,3 +300,7 @@ def main() -> int:
         print(f"[ERROR] {error_message}", file=sys.stderr)
         write_trace("tool_error", error_message)
         return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
