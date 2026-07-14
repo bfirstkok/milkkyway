@@ -13,6 +13,9 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from google import genai
@@ -241,24 +244,59 @@ def dispatch_tool(tool_call: dict) -> str:
     raise RuntimeError(f"ไม่อนุญาตให้เรียก tool: {tool_name}")
 
 
+TRACE_LOG_PATH = Path("agent_trace.log")
+TRACE_EVENTS = {
+    "user_input",
+    "llm_response",
+    "tool_result",
+    "tool_error",
+}
+
+
+def write_trace(event_type: str, payload: object) -> None:
+    """บันทึก Agent trace แบบหนึ่งเหตุการณ์ต่อหนึ่งบรรทัด"""
+
+    if event_type not in TRACE_EVENTS:
+        raise ValueError(f"Unknown trace event: {event_type}")
+
+    if isinstance(payload, (dict, list)):
+        message = json.dumps(payload, ensure_ascii=False)
+    else:
+        message = str(payload)
+
+    message = message.replace("\r", " ").replace("\n", " ")
+    timestamp = datetime.now(
+        ZoneInfo("Asia/Bangkok")
+    ).strftime("%Y-%m-%d %H:%M:%S")
+
+    with TRACE_LOG_PATH.open("a", encoding="utf-8") as log_file:
+        log_file.write(f"{timestamp} | {event_type} | {message}\n")
+
+
 def main() -> int:
     load_dotenv()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--cmd", required=True, help="คำสั่งภาษาไทย")
     args = parser.parse_args()
 
     print(f"[USER] {args.cmd}")
+    write_trace("user_input", args.cmd)
 
-    # TODO 3: เรียก parse_command then dispatch_tool then print trace ตาม format ใน session-2.md
-    tool_call = parse_command(args.cmd)
-    print(f"[LLM]  tool={tool_call['tool']} args={tool_call['args']}")
+    try:
+        tool_call = parse_command(args.cmd)
+        print(f"[LLM]  tool={tool_call['tool']} args={tool_call['args']}")
+        write_trace("llm_response", tool_call)
 
-    result = dispatch_tool(tool_call)
-    print(f"[TOOL] {tool_call['tool']} {result}")
-    print(f"[USER] ← {result}")
+        result = dispatch_tool(tool_call)
+        print(f"[TOOL] {tool_call['tool']} {result}")
+        print(f"[USER] ← {result}")
+        write_trace("tool_result", result)
 
-    return 0
+        return 0
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+    except Exception as exc:
+        error_message = f"{type(exc).__name__}: {exc}"
+        print(f"[ERROR] {error_message}", file=sys.stderr)
+        write_trace("tool_error", error_message)
+        return 1
