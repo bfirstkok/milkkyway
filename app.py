@@ -60,13 +60,23 @@ def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 5) -> l
     # คำถามโปรโมชันสั้น ๆ เช่น "มีโปรอะไร" มักมี semantic signal น้อย
     # จึงดัน chunk สรุปโปรโมชันขึ้นเป็นอันดับแรก แล้วค่อยตามด้วยผล semantic
     normalized_query = query.lower().strip()
-    promotion_keywords = ("โปร", "promotion", "ส่วนลด", "คูปอง", "สิทธิ์")
     priority_results = []
-    if any(keyword in normalized_query for keyword in promotion_keywords):
-        priority_results = [
-            chunk for chunk in chunks
-            if "## สรุปโปรโมชันทั้งหมด" in chunk
-        ]
+    knowledge_routes = [
+        (("โปร", "promotion", "ส่วนลด", "คูปอง", "สิทธิ์"), "## สรุปโปรโมชันทั้งหมด"),
+        (("เครดิต", "เวลาเหลือ", "หมดอายุ", "โอน", "คืนเงิน"), "## ระบบเครดิตเวลา"),
+        (("check-in", "check out", "check-out", "เช็คอิน", "เช็คเอาท์", "qr", "ประตู"), "## ขั้นตอน Check-in และ Check-out"),
+        (("คอม", "computer", "สเปก", "เล่นเกม", "โปรแกรม"), "## คอมพิวเตอร์ให้เช่า"),
+        (("ที่อยู่", "อยู่ไหน", "แผนที่", "เปิดกี่โมง", "24 ชั่วโมง", "กลางคืน"), "## ที่ตั้งและเวลาเปิดบริการ"),
+        (("จอดรถ", "รถยนต์", "มอเตอร์ไซค์", "เดินทาง"), "## ที่จอดรถและการเดินทาง"),
+        (("ห้องน้ำ", "รถเข็น", "ผู้พิการ", "ทางเข้า", "wi-fi", "wifi", "ปลั๊ก"), "## สิ่งอำนวยความสะดวก"),
+        (("ล็อกเกอร์", "ของหาย", "กล้อง", "ของมีค่า", "ความปลอดภัย"), "## ความปลอดภัย ล็อกเกอร์ และของหาย"),
+        (("ไฟดับ", "เน็ตล่ม", "ระบบล่ม", "ชดเชย", "คืนเครดิต"), "## กรณีไฟดับ อินเทอร์เน็ตล่ม และระบบขัดข้อง"),
+    ]
+    for keywords, heading in knowledge_routes:
+        if any(keyword in normalized_query for keyword in keywords):
+            priority_results.extend(
+                chunk for chunk in chunks if heading in chunk
+            )
 
     results = []
     for chunk in priority_results + semantic_results:
@@ -217,14 +227,14 @@ def main():
     st.markdown(
         """
         <div class="hero">
-          <div class="hero-badge">OPEN DAILY · 09:00–24:00</div>
+          <div class="hero-badge">OPEN 24 HOURS · EVERY DAY</div>
           <h1>พื้นที่ดี ๆ ให้งานไปได้ไกลกว่าเดิม</h1>
           <p>Milkkyway คือ Work & Chill Space สำหรับอ่านหนังสือ ทำงาน ประชุม หรือนั่งพัก พร้อม Wi-Fi และปลั๊กไฟ เริ่มเพียง 35 บาทต่อชั่วโมง</p>
         </div>
         <div class="stat-grid">
-          <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-label">เริ่มต้น</div><div class="stat-value">35 บาท/ชั่วโมง</div></div>
+          <div class="stat-card"><div class="stat-icon">🌙</div><div class="stat-label">เวลาเปิดบริการ</div><div class="stat-value">24 ชั่วโมงทุกวัน</div></div>
           <div class="stat-card"><div class="stat-icon">📶</div><div class="stat-label">รวมในแพ็กเกจ</div><div class="stat-value">Wi-Fi + ปลั๊กไฟ</div></div>
-          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">ห้องประชุม</div><div class="stat-value">รองรับ 2–6 คน</div></div>
+          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">พื้นที่ทั้งหมด</div><div class="stat-value">รองรับ 50 คน</div></div>
           <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-label">สิทธิ์นักศึกษา</div><div class="stat-value">ลดสูงสุด 15%</div></div>
         </div>
         """,
@@ -233,8 +243,8 @@ def main():
 
     with st.sidebar:
         st.markdown("<div class='side-brand'><strong>🌌 Milkkyway</strong><span>Work & Chill Space</span></div>", unsafe_allow_html=True)
-        st.markdown("<div class='side-info'>🕘 <b>เปิดทุกวัน</b><br>09:00–24:00 น.</div>", unsafe_allow_html=True)
-        st.markdown("<div class='side-info'>📍 <b>ทำเล</b><br>บริเวณหน้ามหาวิทยาลัย</div>", unsafe_allow_html=True)
+        st.markdown("<div class='side-info'>🌙 <b>เปิด 24 ชั่วโมง</b><br>ทุกวัน ไม่มีเวลาปิด</div>", unsafe_allow_html=True)
+        st.markdown("<div class='side-info'>📍 <b>บึงแก่นนคร ขอนแก่น</b><br>99/95 ซอย 12 พิมานชล 2</div>", unsafe_allow_html=True)
         st.markdown("<div class='side-info'>💬 <b>จองพื้นที่</b><br>ติดต่อผ่าน LINE OA</div>", unsafe_allow_html=True)
         st.divider()
         st.caption("NOVA CAN HELP")
