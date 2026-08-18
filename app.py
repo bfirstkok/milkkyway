@@ -108,12 +108,19 @@ def apply_theme() -> None:
     st.markdown(
         """
         <style>
-        .stApp { background: linear-gradient(145deg, #f7f4ff 0%, #eef7ff 55%, #fff 100%); }
+        .stApp { background: linear-gradient(145deg, #f7f4ff 0%, #eef7ff 55%, #fff 100%); color: #172033; }
         .block-container { max-width: 920px; padding-top: 2rem; }
-        [data-testid="stChatMessage"] { background: rgba(255,255,255,.78); border: 1px solid #e6e0f4; border-radius: 18px; }
+        .stApp h1, .stApp h2, .stApp h3, .stApp p,
+        .stApp label, .stApp [data-testid="stCaptionContainer"] {
+            color: #172033;
+        }
+        [data-testid="stChatMessage"] { background: rgba(255,255,255,.88); border: 1px solid #e6e0f4; border-radius: 18px; color: #172033; }
+        [data-testid="stChatMessage"] p { color: #172033; }
+        [data-testid="stSidebar"] { background: #f1edfb; }
+        [data-testid="stSidebar"] * { color: #222033; }
         .hero { padding: 1.35rem 1.5rem; border-radius: 24px; color: white; background: linear-gradient(120deg,#4b2e83,#7257b5 55%,#3f83c5); box-shadow: 0 14px 35px rgba(75,46,131,.18); margin-bottom: 1.2rem; }
-        .hero h1 { margin: 0; font-size: 2.15rem; }
-        .hero p { margin: .45rem 0 0; opacity: .92; }
+        .hero h1 { margin: 0; font-size: 2.15rem; color: white; }
+        .hero p { margin: .45rem 0 0; opacity: .92; color: white; }
         </style>
         """,
         unsafe_allow_html=True,
