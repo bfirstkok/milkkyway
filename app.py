@@ -93,19 +93,29 @@ def build_quota_fallback(context_chunks: list[str]) -> str:
     if len(context_text) > 5000:
         context_text = context_text[:5000].rsplit("\n", 1)[0] + "\n…"
     return (
-        "ตอนนี้ Nova มีผู้ใช้งานพร้อมกันจำนวนมาก จึงสรุปด้วย AI ไม่ได้ชั่วคราว "
-        "แต่ค้นข้อมูลที่เกี่ยวข้องจากฐานความรู้ของ Milkkyway ให้แล้วค่ะ\n\n"
+        "ระบบสรุปด้วย AI ไม่พร้อมชั่วคราว แต่ Nova ค้นข้อมูลที่เกี่ยวข้อง "
+        "จากฐานความรู้ของ Milkkyway ให้แล้วค่ะ\n\n"
         f"{context_text}\n\n"
         "หากต้องการคำตอบแบบสรุป กรุณารอประมาณ 1 นาทีแล้วลองถามอีกครั้งค่ะ"
     )
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
+def request_gemini(prompt: str, api_key: str) -> str:
+    """Cache only successful Gemini responses; raised errors are not cached."""
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+    return response.text or ""
+
+
 def generate_answer(query: str, context_chunks: list[str]) -> str:
-    """Generate a grounded answer from retrieved Milkkyway information."""
+    """Generate a grounded answer, falling back to retrieved facts on any outage."""
     api_key = get_api_key()
     if not api_key:
-        return "ไม่พบ GEMINI_API_KEY กรุณาตั้งค่าใน Streamlit Secrets ก่อนใช้งาน"
+        return build_quota_fallback(context_chunks)
 
     context = "\n\n---\n\n".join(context_chunks)
     prompt = f"""
@@ -127,16 +137,12 @@ Context:
 
 คำตอบ:
 """
-    client = genai.Client(api_key=api_key)
     for attempt, delay in enumerate((0, 2.5, 5.0), start=1):
         if delay:
             time.sleep(delay)
         try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-            )
-            return response.text or "ขออภัย ระบบไม่ได้รับคำตอบจาก Gemini"
+            answer = request_gemini(prompt, api_key)
+            return answer or build_quota_fallback(context_chunks)
         except Exception as exc:
             error_text = str(exc)
             is_quota_error = "429" in error_text or "RESOURCE_EXHAUSTED" in error_text
@@ -144,10 +150,7 @@ Context:
                 continue
             if is_quota_error:
                 return build_quota_fallback(context_chunks)
-            return (
-                "ขออภัย Nova เชื่อมต่อบริการ AI ไม่สำเร็จชั่วคราวค่ะ "
-                "กรุณาลองใหม่อีกครั้ง หรือติดต่อพนักงานหากต้องการข้อมูลเร่งด่วน"
-            )
+            return build_quota_fallback(context_chunks)
 
     return build_quota_fallback(context_chunks)
 
