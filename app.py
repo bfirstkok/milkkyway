@@ -45,7 +45,7 @@ def load_index():
     return model, index, chunks
 
 
-def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 4) -> list[str]:
+def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 5) -> list[str]:
     """Return the knowledge-base chunks most relevant to a question."""
     query_embedding = model.encode(
         [query],
@@ -156,7 +156,7 @@ def main():
         st.markdown("**เริ่มต้น:** 35 บาท/ชั่วโมง")
         st.divider()
         st.caption("ลองถาม Nova")
-        st.markdown("• มีแพ็กเกจอะไรบ้าง\n\n• จะประชุม 4 คนควรเลือกโซนไหน\n\n• เปิดถึงกี่โมง\n\n• มีปลั๊กและ Wi-Fi ไหม")
+        st.markdown("• วันนี้มีโปรโมชันอะไรบ้าง\n\n• นักศึกษามีส่วนลดไหม\n\n• มา 4 คนเลือกแพ็กเกจไหนดี\n\n• สมาชิกแบบไหนคุ้มที่สุด\n\n• วันเกิดได้สิทธิ์อะไรบ้าง")
 
     st.subheader("คุยกับ Nova ผู้ช่วยของ Milkkyway")
     st.caption("คำตอบอ้างอิงจากข้อมูลแพ็กเกจ โซน การจอง และกฎของร้าน")
