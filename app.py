@@ -109,6 +109,11 @@ def apply_theme() -> None:
         """
         <style>
         .stApp { background: linear-gradient(145deg, #f7f4ff 0%, #eef7ff 55%, #fff 100%); color: #172033; }
+        header[data-testid="stHeader"] { background: rgba(247,244,255,.92); }
+        [data-testid="stToolbar"] { color: #4b2e83; }
+        [data-testid="stBottomBlockContainer"] {
+            background: linear-gradient(180deg, rgba(238,247,255,0) 0%, #eef7ff 32%, #eef7ff 100%);
+        }
         .block-container { max-width: 920px; padding-top: 2rem; }
         .stApp h1, .stApp h2, .stApp h3, .stApp p,
         .stApp label, .stApp [data-testid="stCaptionContainer"] {
@@ -118,6 +123,9 @@ def apply_theme() -> None:
         [data-testid="stChatMessage"] p { color: #172033; }
         [data-testid="stSidebar"] { background: #f1edfb; }
         [data-testid="stSidebar"] * { color: #222033; }
+        [data-testid="stChatInput"] { background: white; color: #172033; border: 1px solid #d9d0ed; }
+        [data-testid="stChatInput"] textarea { color: #172033; -webkit-text-fill-color: #172033; }
+        [data-testid="stChatInput"] textarea::placeholder { color: #6b7280; opacity: 1; }
         .hero { padding: 1.35rem 1.5rem; border-radius: 24px; color: white; background: linear-gradient(120deg,#4b2e83,#7257b5 55%,#3f83c5); box-shadow: 0 14px 35px rgba(75,46,131,.18); margin-bottom: 1.2rem; }
         .hero h1 { margin: 0; font-size: 2.15rem; color: white; }
         .hero p { margin: .45rem 0 0; opacity: .92; color: white; }
