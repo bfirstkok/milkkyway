@@ -6,6 +6,7 @@ Run locally:
 
 import os
 import re
+import time
 
 import faiss
 import streamlit as st
@@ -85,6 +86,21 @@ def get_api_key() -> str | None:
         return None
 
 
+def build_quota_fallback(context_chunks: list[str]) -> str:
+    """Return useful retrieved facts when the LLM quota is temporarily full."""
+    useful_chunks = context_chunks[:3]
+    context_text = "\n\n---\n\n".join(useful_chunks)
+    if len(context_text) > 5000:
+        context_text = context_text[:5000].rsplit("\n", 1)[0] + "\n…"
+    return (
+        "ตอนนี้ Nova มีผู้ใช้งานพร้อมกันจำนวนมาก จึงสรุปด้วย AI ไม่ได้ชั่วคราว "
+        "แต่ค้นข้อมูลที่เกี่ยวข้องจากฐานความรู้ของ Milkkyway ให้แล้วค่ะ\n\n"
+        f"{context_text}\n\n"
+        "หากต้องการคำตอบแบบสรุป กรุณารอประมาณ 1 นาทีแล้วลองถามอีกครั้งค่ะ"
+    )
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
 def generate_answer(query: str, context_chunks: list[str]) -> str:
     """Generate a grounded answer from retrieved Milkkyway information."""
     api_key = get_api_key()
@@ -111,15 +127,29 @@ Context:
 
 คำตอบ:
 """
-    try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
-        return response.text or "ขออภัย ระบบไม่ได้รับคำตอบจาก Gemini"
-    except Exception as exc:
-        return f"เกิดข้อผิดพลาดในการเรียก Gemini: {exc}"
+    client = genai.Client(api_key=api_key)
+    for attempt, delay in enumerate((0, 2.5, 5.0), start=1):
+        if delay:
+            time.sleep(delay)
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+            )
+            return response.text or "ขออภัย ระบบไม่ได้รับคำตอบจาก Gemini"
+        except Exception as exc:
+            error_text = str(exc)
+            is_quota_error = "429" in error_text or "RESOURCE_EXHAUSTED" in error_text
+            if is_quota_error and attempt < 3:
+                continue
+            if is_quota_error:
+                return build_quota_fallback(context_chunks)
+            return (
+                "ขออภัย Nova เชื่อมต่อบริการ AI ไม่สำเร็จชั่วคราวค่ะ "
+                "กรุณาลองใหม่อีกครั้ง หรือติดต่อพนักงานหากต้องการข้อมูลเร่งด่วน"
+            )
+
+    return build_quota_fallback(context_chunks)
 
 
 def apply_theme() -> None:
