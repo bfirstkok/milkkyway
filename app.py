@@ -1,4 +1,4 @@
-"""MilkLab RAG Chatbot (S3).
+"""Milkkyway Work & Chill Space RAG chatbot.
 
 Run locally:
     streamlit run app.py
@@ -8,113 +8,82 @@ import os
 import re
 
 import faiss
-import numpy as np
 import streamlit as st
 from google import genai
 from sentence_transformers import SentenceTransformer
 
 
+BUSINESS_NAME = "Milkkyway"
+KNOWLEDGE_BASE_PATH = "menu_kb.md"
+
+
 @st.cache_resource
 def load_index():
-    """Load menu_kb.md, split into chunks, encode, and create FAISS index."""
-
-    # TODO 1: โหลด knowledge base
-    with open("menu_kb.md", "r", encoding="utf-8") as file:
+    """Load, chunk, embed, and index the business knowledge base."""
+    with open(KNOWLEDGE_BASE_PATH, "r", encoding="utf-8") as file:
         document = file.read()
 
-    # TODO 2: แบ่งเอกสารเป็น chunk
-    # แบ่งตามหัวข้อ/ย่อหน้า เพื่อให้แต่ละ chunk ยังมีความหมายครบ
     chunks = [
         chunk.strip()
         for chunk in re.split(r"\n\s*\n", document)
         if chunk.strip()
     ]
-
     if not chunks:
-        raise ValueError("ไม่พบข้อมูลใน menu_kb.md")
+        raise ValueError(f"ไม่พบข้อมูลใน {KNOWLEDGE_BASE_PATH}")
 
-    # TODO 3: สร้าง embedding
-    # multilingual model รองรับภาษาไทยและภาษาอื่น ๆ
     model = SentenceTransformer(
         "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
-
     embeddings = model.encode(
         chunks,
         convert_to_numpy=True,
         normalize_embeddings=True,
     ).astype("float32")
 
-    # ใช้ Inner Product กับ normalized embeddings = cosine similarity
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dimension)
+    index = faiss.IndexFlatIP(embeddings.shape[1])
     index.add(embeddings)
-
     return model, index, chunks
 
 
-def retrieve_top_k(
-    query: str,
-    model,
-    index,
-    chunks: list[str],
-    k: int = 3,
-) -> list[str]:
-    """Encode query, search FAISS index, and return top-k chunks."""
-
-    # TODO 4
+def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 4) -> list[str]:
+    """Return the knowledge-base chunks most relevant to a question."""
     query_embedding = model.encode(
         [query],
         convert_to_numpy=True,
         normalize_embeddings=True,
     ).astype("float32")
+    _, indices = index.search(query_embedding, min(k, len(chunks)))
+    return [chunks[idx] for idx in indices[0] if idx != -1]
 
-    # ป้องกันกรณีจำนวน chunk น้อยกว่า k
-    k = min(k, len(chunks))
 
-    scores, indices = index.search(query_embedding, k)
-
-    results = []
-
-    for idx in indices[0]:
-        if idx != -1:
-            results.append(chunks[idx])
-
-    return results
+def get_api_key() -> str | None:
+    """Read Gemini key from the environment or Streamlit Secrets."""
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if api_key:
+        return api_key
+    try:
+        return st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
+    except FileNotFoundError:
+        return None
 
 
 def generate_answer(query: str, context_chunks: list[str]) -> str:
-    """Send query + retrieved context to Gemini."""
-
-    # TODO 5
-    api_key = os.getenv("GEMINI_API_KEY")
-
-    # รองรับ Streamlit secrets ตอน deploy
+    """Generate a grounded answer from retrieved Milkkyway information."""
+    api_key = get_api_key()
     if not api_key:
-        try:
-            api_key = st.secrets["GEMINI_API_KEY"]
-        except (KeyError, FileNotFoundError):
-            pass
-
-    if not api_key:
-        return (
-            "ไม่พบ GEMINI_API_KEY กรุณาตั้งค่า API key "
-            "ใน environment variable หรือ Streamlit Secrets"
-        )
+        return "ไม่พบ GEMINI_API_KEY กรุณาตั้งค่าใน Streamlit Secrets ก่อนใช้งาน"
 
     context = "\n\n---\n\n".join(context_chunks)
-
     prompt = f"""
-คุณคือผู้ช่วยของร้าน MilkLab
+คุณชื่อ Nova เป็นผู้ช่วยประจำ Milkkyway – Work & Chill Space
+พื้นที่เช่ารายชั่วโมงสำหรับนั่งทำงาน อ่านหนังสือ ประชุม และพักผ่อน
 
-ตอบคำถามโดยใช้เฉพาะข้อมูลใน Context ที่ให้มาเท่านั้น
-ห้ามแต่งข้อมูลเพิ่มเติมเอง
-
-ถ้า Context ไม่มีข้อมูลเพียงพอสำหรับตอบคำถาม
-ให้ตอบว่า "ขออภัย ไม่พบข้อมูลนี้ในฐานข้อมูลของ MilkLab"
-
-ตอบเป็นภาษาเดียวกับที่ผู้ใช้ถาม
-ตอบให้กระชับและเข้าใจง่าย
+กติกาการตอบ:
+- ใช้เฉพาะข้อมูลใน Context เท่านั้น ห้ามแต่งราคา เวลา หรือเงื่อนไขเอง
+- ตอบเป็นภาษาเดียวกับผู้ใช้ ด้วยน้ำเสียงเป็นมิตร สุภาพ และกระชับ
+- ช่วยเปรียบเทียบแพ็กเกจหรือคำนวณค่าใช้บริการได้เมื่อ Context มีข้อมูลครบ
+- หากยังไม่มีระบบตรวจที่นั่งแบบเรียลไทม์ ให้แนะนำช่องทางยืนยันกับร้าน
+- ถ้า Context ไม่มีคำตอบ ให้ตอบว่า "ขออภัย Nova ยังไม่พบข้อมูลนี้ในฐานความรู้ของ Milkkyway กรุณาติดต่อพนักงานเพื่อยืนยันค่ะ"
 
 Context:
 {context}
@@ -124,82 +93,93 @@ Context:
 
 คำตอบ:
 """
-
     try:
         client = genai.Client(api_key=api_key)
-
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
         )
-
-        return response.text
-
+        return response.text or "ขออภัย ระบบไม่ได้รับคำตอบจาก Gemini"
     except Exception as exc:
         return f"เกิดข้อผิดพลาดในการเรียก Gemini: {exc}"
 
 
-def main():
-    st.set_page_config(
-        page_title="MilkLab° RAG",
-        page_icon="🥛",
+def apply_theme() -> None:
+    st.markdown(
+        """
+        <style>
+        .stApp { background: linear-gradient(145deg, #f7f4ff 0%, #eef7ff 55%, #fff 100%); }
+        .block-container { max-width: 920px; padding-top: 2rem; }
+        [data-testid="stChatMessage"] { background: rgba(255,255,255,.78); border: 1px solid #e6e0f4; border-radius: 18px; }
+        .hero { padding: 1.35rem 1.5rem; border-radius: 24px; color: white; background: linear-gradient(120deg,#4b2e83,#7257b5 55%,#3f83c5); box-shadow: 0 14px 35px rgba(75,46,131,.18); margin-bottom: 1.2rem; }
+        .hero h1 { margin: 0; font-size: 2.15rem; }
+        .hero p { margin: .45rem 0 0; opacity: .92; }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.title("MilkLab° RAG Chatbot")
-    st.caption("ถามอะไรเกี่ยวกับ MilkLab ได้ ตอบจาก menu_kb.md")
+
+def main():
+    st.set_page_config(page_title="Milkkyway | Work & Chill Space", page_icon="🌌")
+    apply_theme()
+
+    st.markdown(
+        """
+        <div class="hero">
+          <h1>🌌 Milkkyway</h1>
+          <p>Work & Chill Space · จะทำงาน อ่านหนังสือ ประชุม หรือนั่งพัก ก็จ่ายตามเวลาที่ใช้</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.sidebar:
+        st.header("Milkkyway")
+        st.write("พื้นที่รายชั่วโมงสำหรับนักศึกษา ฟรีแลนซ์ และคนทำงานออนไลน์")
+        st.markdown("**เปิดทุกวัน:** 09:00–24:00 น.")
+        st.markdown("**เริ่มต้น:** 35 บาท/ชั่วโมง")
+        st.divider()
+        st.caption("ลองถาม Nova")
+        st.markdown("• มีแพ็กเกจอะไรบ้าง\n\n• จะประชุม 4 คนควรเลือกโซนไหน\n\n• เปิดถึงกี่โมง\n\n• มีปลั๊กและ Wi-Fi ไหม")
+
+    st.subheader("คุยกับ Nova ผู้ช่วยของ Milkkyway")
+    st.caption("คำตอบอ้างอิงจากข้อมูลแพ็กเกจ โซน การจอง และกฎของร้าน")
 
     try:
         model, index, chunks = load_index()
     except Exception as exc:
-        st.error(f"ไม่สามารถโหลด Knowledge Base ได้: {exc}")
+        st.error(f"ไม่สามารถโหลดฐานความรู้ได้: {exc}")
         st.stop()
 
     if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    if prompt := st.chat_input("ถามอะไรเกี่ยวกับ MilkLab"):
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        )
-
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        with st.chat_message("assistant"):
-            with st.spinner("กำลังค้นข้อมูล..."):
-                context = retrieve_top_k(
-                    prompt,
-                    model,
-                    index,
-                    chunks,
-                    k=3,
-                )
-
-                answer = generate_answer(
-                    prompt,
-                    context,
-                )
-
-            st.write(answer)
-
-            with st.expander("Source chunks"):
-                for i, chunk in enumerate(context, 1):
-                    st.markdown(f"**[{i}]**")
-                    st.write(chunk)
-
-        st.session_state.messages.append(
+        st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": answer,
+                "content": "สวัสดีค่ะ ฉันชื่อ Nova 🌟 วันนี้อยากหาที่นั่งทำงาน อ่านหนังสือ ประชุม หรือนั่งพักแบบไหนคะ?",
             }
-        )
+        ]
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    if query := st.chat_input("ถามเรื่องราคา แพ็กเกจ โซน หรือการจอง..."):
+        st.session_state.messages.append({"role": "user", "content": query})
+        with st.chat_message("user"):
+            st.write(query)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Nova กำลังค้นข้อมูล..."):
+                context = retrieve_top_k(query, model, index, chunks)
+                answer = generate_answer(query, context)
+            st.write(answer)
+            with st.expander("ดูแหล่งข้อมูลที่ใช้อ้างอิง"):
+                for number, chunk in enumerate(context, 1):
+                    st.markdown(f"**แหล่งข้อมูล {number}**")
+                    st.write(chunk)
+
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
 
 if __name__ == "__main__":

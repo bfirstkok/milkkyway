@@ -1,30 +1,51 @@
-# MilkLab° Solopreneur Starter (Course 69-1)
+# Milkkyway – Work & Chill Space
 
-Template repo สำหรับวิชา 31-407-106-406 : AI for Solopreneurs
+RAG chatbot สำหรับธุรกิจพื้นที่นั่งทำงาน อ่านหนังสือ ประชุม และพักผ่อนแบบรายชั่วโมง พัฒนาต่อยอดจาก MilkLab° ในรายวิชา AI for Solopreneurs
 
-## เริ่มต้น
+## Demo
 
-1. **Use this template** then Create a new repository (ตั้งชื่อ `milklab-<ชื่อ>`)
-2. เปิด **Codespaces** จาก repo ใหม่
-3. ตั้ง user-level Codespaces secret `GOOGLE_API_KEY` (ดู Quickstart)
-4. รัน `python scripts/verify_setup.py` ใน terminal
+[เปิด Milkkyway บน Streamlit](https://milkkyway-9otlppbuxvcbph2sdn5v4t.streamlit.app/)
+
+## ความสามารถ
+
+- ตอบข้อมูลแพ็กเกจรายชั่วโมงและ Day Pass
+- แนะนำโซนตามลักษณะการใช้งาน
+- ตอบข้อมูลห้องประชุม การจอง และการยกเลิก
+- อธิบายสิ่งอำนวยความสะดวก บริการเสริม และกฎของร้าน
+- แสดงส่วนของฐานความรู้ที่นำมาใช้อ้างอิง
+- ตอบโดยยึดเฉพาะข้อมูลที่ค้นได้จากฐานความรู้
+
+## RAG pipeline
+
+1. โหลดฐานความรู้จาก `menu_kb.md`
+2. แบ่งเอกสารเป็น chunks ตามหัวข้อและย่อหน้า
+3. สร้าง embeddings ด้วย `paraphrase-multilingual-MiniLM-L12-v2`
+4. ค้นหา chunks ที่เกี่ยวข้องด้วย FAISS cosine similarity
+5. ส่ง context ให้ Gemini 2.5 Flash สร้างคำตอบ
+
+## เริ่มต้นใช้งาน
+
+```bash
+pip install -r requirements.txt
+export GEMINI_API_KEY="your-api-key"
+streamlit run app.py
+```
+
+สำหรับ Streamlit Community Cloud ให้ตั้ง `GEMINI_API_KEY` ใน App settings → Secrets โดยไม่ใส่ API key ลงใน Repository
 
 ## ไฟล์หลัก
 
-| ไฟล์ | Session | คำอธิบาย |
-|---|---|---|
-| `caption_generator.py` | S1 | สร้างแคปชั่นให้โพสต์ MilkLab |
-| `sales_logger.py` | S2 | บันทึกยอดขายลง Google Sheets |
-| `agent_harness.py` | S2 | รับคำสั่งภาษาไทย เรียก tool |
-| `app.py` | S3 | Streamlit RAG chatbot |
+| ไฟล์ | รายละเอียด |
+|---|---|
+| `app.py` | หน้า Streamlit และ RAG chatbot |
+| `menu_kb.md` | ฐานความรู้ธุรกิจ Milkkyway |
+| `PIVOT.md` | เอกสารอธิบายการเปลี่ยน Domain |
+| `requirements.txt` | Python dependencies |
 
-## เครื่องมือ
+## เทคโนโลยี
 
 - Python 3.11
-- Gemini API (google-genai)
-- Streamlit (S3)
-- gspread (S2)
-
-## ดูคอร์ส
-
-[course-691-stsw](https://github.com/<owner>/course-691-stsw) (link จะ update ตอนสร้าง public repo)
+- Streamlit
+- Gemini API (`google-genai`)
+- Sentence Transformers
+- FAISS
