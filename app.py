@@ -126,27 +126,46 @@ def apply_theme() -> None:
     st.markdown(
         """
         <style>
-        .stApp { background: linear-gradient(145deg, #f7f4ff 0%, #eef7ff 55%, #fff 100%); color: #172033; }
-        header[data-testid="stHeader"] { background: rgba(247,244,255,.92); }
+        .stApp { background: #f7f8fc; color: #182035; }
+        header[data-testid="stHeader"] { background: rgba(247,248,252,.9); backdrop-filter: blur(12px); }
         [data-testid="stToolbar"] { color: #4b2e83; }
         [data-testid="stBottomBlockContainer"] {
-            background: linear-gradient(180deg, rgba(238,247,255,0) 0%, #eef7ff 32%, #eef7ff 100%);
+            background: linear-gradient(180deg, rgba(247,248,252,0) 0%, #f7f8fc 35%, #f7f8fc 100%);
         }
-        .block-container { max-width: 920px; padding-top: 2rem; }
+        .block-container { max-width: 1040px; padding-top: 1.25rem; padding-bottom: 7rem; }
         .stApp h1, .stApp h2, .stApp h3, .stApp p,
         .stApp label, .stApp [data-testid="stCaptionContainer"] {
-            color: #172033;
+            color: #182035;
         }
-        [data-testid="stChatMessage"] { background: rgba(255,255,255,.88); border: 1px solid #e6e0f4; border-radius: 18px; color: #172033; }
-        [data-testid="stChatMessage"] p { color: #172033; }
-        [data-testid="stSidebar"] { background: #f1edfb; }
-        [data-testid="stSidebar"] * { color: #222033; }
-        [data-testid="stChatInput"] { background: white; color: #172033; border: 1px solid #d9d0ed; }
+        [data-testid="stChatMessage"] { background: #fff; border: 1px solid #e7e9f2; border-radius: 20px; color: #182035; box-shadow: 0 8px 28px rgba(34,38,70,.05); padding: .35rem .55rem; margin-bottom: .75rem; }
+        [data-testid="stChatMessage"] p { color: #182035; line-height: 1.7; }
+        [data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #ececf4; }
+        [data-testid="stSidebar"] * { color: #25233a; }
+        [data-testid="stChatInput"] { background: white; color: #172033; border: 1px solid #dcd9eb; border-radius: 18px; box-shadow: 0 12px 35px rgba(54,44,99,.12); }
         [data-testid="stChatInput"] textarea { color: #172033; -webkit-text-fill-color: #172033; }
         [data-testid="stChatInput"] textarea::placeholder { color: #6b7280; opacity: 1; }
-        .hero { padding: 1.35rem 1.5rem; border-radius: 24px; color: white; background: linear-gradient(120deg,#4b2e83,#7257b5 55%,#3f83c5); box-shadow: 0 14px 35px rgba(75,46,131,.18); margin-bottom: 1.2rem; }
-        .hero h1 { margin: 0; font-size: 2.15rem; color: white; }
-        .hero p { margin: .45rem 0 0; opacity: .92; color: white; }
+        .hero { position: relative; overflow: hidden; padding: 2rem 2.1rem; border-radius: 28px; color: white; background: linear-gradient(125deg,#3e2478 0%,#684bb1 50%,#348dd1 100%); box-shadow: 0 20px 50px rgba(73,53,139,.2); margin-bottom: 1rem; }
+        .hero:after { content: ''; position: absolute; width: 230px; height: 230px; right: -70px; top: -105px; border-radius: 50%; background: rgba(255,255,255,.12); }
+        .hero-badge { display: inline-flex; padding: .36rem .72rem; border-radius: 999px; background: rgba(255,255,255,.16); color: white; font-size: .82rem; font-weight: 700; margin-bottom: .75rem; }
+        .hero h1 { margin: 0; font-size: 2.35rem; letter-spacing: -.03em; color: white; }
+        .hero p { margin: .55rem 0 0; opacity: .92; color: white; max-width: 680px; font-size: 1.02rem; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: .75rem; margin: .9rem 0 1.55rem; }
+        .stat-card { background: white; border: 1px solid #ececf4; border-radius: 18px; padding: 1rem; box-shadow: 0 7px 24px rgba(32,37,67,.04); }
+        .stat-icon { font-size: 1.35rem; }
+        .stat-label { color: #74788d; font-size: .78rem; margin-top: .4rem; }
+        .stat-value { color: #20243a; font-weight: 800; font-size: 1rem; margin-top: .12rem; }
+        .section-kicker { color: #684bb1; font-size: .8rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .15rem; }
+        .section-title { font-size: 1.45rem; font-weight: 850; color: #20243a; margin-bottom: .25rem; }
+        .section-subtitle { color: #74788d; font-size: .9rem; margin-bottom: .85rem; }
+        .side-brand { background: linear-gradient(135deg,#442680,#6d55b8); border-radius: 18px; padding: 1.1rem; margin: .2rem 0 1rem; }
+        .side-brand strong, .side-brand span { color: white !important; }
+        .side-brand strong { display:block; font-size:1.18rem; }
+        .side-brand span { display:block; opacity:.82; font-size:.8rem; margin-top:.18rem; }
+        .side-info { background:#f7f5fc; border:1px solid #ebe6f5; border-radius:14px; padding:.75rem .85rem; margin:.55rem 0; font-size:.86rem; }
+        .stButton > button { border: 1px solid #e6e1f1; background: #fff; color: #3f3563; border-radius: 14px; min-height: 54px; font-weight: 700; box-shadow: 0 5px 16px rgba(52,44,90,.04); transition: all .18s ease; }
+        .stButton > button:hover { border-color: #7054b6; color: #563a9a; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(85,61,151,.12); }
+        div[data-testid="stExpander"] { border: 1px solid #ececf3; border-radius: 14px; background: #fafafd; }
+        @media (max-width: 760px) { .stat-grid { grid-template-columns: repeat(2,1fr); } .hero { padding:1.4rem; } .hero h1 { font-size:1.9rem; } }
         </style>
         """,
         unsafe_allow_html=True,
@@ -154,30 +173,56 @@ def apply_theme() -> None:
 
 
 def main():
-    st.set_page_config(page_title="Milkkyway | Work & Chill Space", page_icon="🌌")
+    st.set_page_config(
+        page_title="Milkkyway | Work & Chill Space",
+        page_icon="🌌",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
     apply_theme()
 
     st.markdown(
         """
         <div class="hero">
-          <h1>🌌 Milkkyway</h1>
-          <p>Work & Chill Space · จะทำงาน อ่านหนังสือ ประชุม หรือนั่งพัก ก็จ่ายตามเวลาที่ใช้</p>
+          <div class="hero-badge">OPEN DAILY · 09:00–24:00</div>
+          <h1>พื้นที่ดี ๆ ให้งานไปได้ไกลกว่าเดิม</h1>
+          <p>Milkkyway คือ Work & Chill Space สำหรับอ่านหนังสือ ทำงาน ประชุม หรือนั่งพัก พร้อม Wi-Fi และปลั๊กไฟ เริ่มเพียง 35 บาทต่อชั่วโมง</p>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-label">เริ่มต้น</div><div class="stat-value">35 บาท/ชั่วโมง</div></div>
+          <div class="stat-card"><div class="stat-icon">📶</div><div class="stat-label">รวมในแพ็กเกจ</div><div class="stat-value">Wi-Fi + ปลั๊กไฟ</div></div>
+          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">ห้องประชุม</div><div class="stat-value">รองรับ 2–6 คน</div></div>
+          <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-label">สิทธิ์นักศึกษา</div><div class="stat-value">ลดสูงสุด 15%</div></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     with st.sidebar:
-        st.header("Milkkyway")
-        st.write("พื้นที่รายชั่วโมงสำหรับนักศึกษา ฟรีแลนซ์ และคนทำงานออนไลน์")
-        st.markdown("**เปิดทุกวัน:** 09:00–24:00 น.")
-        st.markdown("**เริ่มต้น:** 35 บาท/ชั่วโมง")
+        st.markdown("<div class='side-brand'><strong>🌌 Milkkyway</strong><span>Work & Chill Space</span></div>", unsafe_allow_html=True)
+        st.markdown("<div class='side-info'>🕘 <b>เปิดทุกวัน</b><br>09:00–24:00 น.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='side-info'>📍 <b>ทำเล</b><br>บริเวณหน้ามหาวิทยาลัย</div>", unsafe_allow_html=True)
+        st.markdown("<div class='side-info'>💬 <b>จองพื้นที่</b><br>ติดต่อผ่าน LINE OA</div>", unsafe_allow_html=True)
         st.divider()
-        st.caption("ลองถาม Nova")
-        st.markdown("• วันนี้มีโปรโมชันอะไรบ้าง\n\n• นักศึกษามีส่วนลดไหม\n\n• มา 4 คนเลือกแพ็กเกจไหนดี\n\n• สมาชิกแบบไหนคุ้มที่สุด\n\n• วันเกิดได้สิทธิ์อะไรบ้าง")
+        st.caption("NOVA CAN HELP")
+        st.write("✓ เปรียบเทียบแพ็กเกจ\n\n✓ ค้นหาโปรโมชัน\n\n✓ แนะนำโซนและห้อง\n\n✓ ตอบกฎและการจอง")
 
-    st.subheader("คุยกับ Nova ผู้ช่วยของ Milkkyway")
-    st.caption("คำตอบอ้างอิงจากข้อมูลแพ็กเกจ โซน การจอง และกฎของร้าน")
+    st.markdown("<div class='section-kicker'>QUICK START</div><div class='section-title'>อยากรู้อะไร เลือกถาม Nova ได้เลย</div><div class='section-subtitle'>กดหัวข้อด้านล่าง หรือพิมพ์คำถามของคุณในช่องแชต</div>", unsafe_allow_html=True)
+
+    quick_query = None
+    quick_columns = st.columns(4)
+    quick_actions = [
+        ("🎉 โปรโมชันวันนี้", "วันนี้มีโปรโมชันอะไรบ้าง และมีเงื่อนไขสำคัญอะไร"),
+        ("🎓 สิทธิ์นักศึกษา", "ฉันเป็นนักศึกษา มีส่วนลดหรือแพ็กเกจอะไรที่คุ้มบ้าง"),
+        ("👥 มาเป็นกลุ่ม", "มา 4 คน ใช้ 3 ชั่วโมง ควรเลือกแพ็กเกจหรือโปรโมชันอะไร"),
+        ("⭐ สมาชิกและแต้ม", "สมาชิก Milkkyway มีสิทธิ์อะไร และสะสมดาวอย่างไร"),
+    ]
+    for column, (label, question) in zip(quick_columns, quick_actions):
+        with column:
+            if st.button(label, use_container_width=True):
+                quick_query = question
+
+    st.markdown("<br><div class='section-kicker'>ASK NOVA</div><div class='section-title'>ผู้ช่วยส่วนตัวของคุณที่ Milkkyway</div><div class='section-subtitle'>คำตอบอ้างอิงจากข้อมูลราคา โปรโมชัน โซน การจอง และกฎของร้าน</div>", unsafe_allow_html=True)
 
     try:
         model, index, chunks = load_index()
@@ -197,7 +242,9 @@ def main():
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    if query := st.chat_input("ถามเรื่องราคา แพ็กเกจ โซน หรือการจอง..."):
+    typed_query = st.chat_input("ถาม Nova เรื่องราคา โปรโมชัน แพ็กเกจ โซน หรือการจอง...")
+    query = quick_query or typed_query
+    if query:
         st.session_state.messages.append({"role": "user", "content": query})
         with st.chat_message("user"):
             st.write(query)
