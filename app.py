@@ -64,9 +64,9 @@ def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 5) -> l
     knowledge_routes = [
         (("โปร", "promotion", "ส่วนลด", "คูปอง", "สิทธิ์"), "## สรุปโปรโมชันทั้งหมด"),
         (("เครดิต", "เวลาเหลือ", "หมดอายุ", "โอน", "คืนเงิน"), "## ระบบเครดิตเวลา"),
-        (("ราคา", "กี่บาท", "แพ็ก", "ชั่วโมง", "ชม.", "ชม "), "## แพ็กเกจที่นั่งทั่วไป"),
         (("check-in", "check out", "check-out", "เช็คอิน", "เช็คเอาท์", "qr", "ประตู"), "## ขั้นตอน Check-in และ Check-out"),
         (("คอม", "computer", "สเปก", "เล่นเกม", "โปรแกรม"), "## คอมพิวเตอร์ให้เช่า"),
+        (("ราคา", "กี่บาท", "แพ็ก", "ชั่วโมง", "ชม.", "ชม "), "## แพ็กเกจที่นั่งทั่วไป"),
         (("ที่อยู่", "อยู่ไหน", "แผนที่", "เปิดกี่โมง", "24 ชั่วโมง", "กลางคืน"), "## ที่ตั้งและเวลาเปิดบริการ"),
         (("จอดรถ", "รถยนต์", "มอเตอร์ไซค์", "เดินทาง"), "## ที่จอดรถและการเดินทาง"),
         (("ห้องน้ำ", "รถเข็น", "ผู้พิการ", "ทางเข้า", "wi-fi", "wifi", "ปลั๊ก"), "## สิ่งอำนวยความสะดวก"),
@@ -118,6 +118,49 @@ def format_conversation_history(messages: list[dict]) -> str:
         if content:
             lines.append(f"{role}: {content}")
     return "\n".join(lines) or "ยังไม่มีบทสนทนาก่อนหน้า"
+
+
+def calculate_known_hourly_price(query: str, messages: list[dict]) -> str | None:
+    """Calculate fixed hourly services without depending on an LLM."""
+    hour_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:ชั่วโมง|ชม\.?|hours?|hrs?)", query.lower())
+    if not hour_match:
+        return None
+
+    hours = float(hour_match.group(1))
+    if hours <= 0 or hours > 720:
+        return None
+
+    previous_user_questions = [
+        message["content"]
+        for message in messages
+        if message.get("role") == "user" and message.get("content")
+    ]
+    service_context = " ".join(previous_user_questions[-2:] + [query]).lower()
+    services = [
+        (("คอม", "computer", "pc"), "คอมพิวเตอร์", 30),
+        (("จอเสริม", "monitor"), "จอเสริม", 20),
+        (("หูฟัง", "headphone", "headset"), "หูฟัง", 10),
+        (("webcam", "เว็บแคม", "กล้องเว็บ"), "Webcam", 10),
+        (("ไมโครโฟน", "microphone", "ไมค์"), "ไมโครโฟน", 15),
+        (("โปรเจกเตอร์", "projector", "ทีวี", "tv"), "โปรเจกเตอร์หรือทีวี", 50),
+        (("ล็อกเกอร์", "locker"), "ล็อกเกอร์", 10),
+    ]
+    for keywords, service_name, hourly_rate in services:
+        if any(keyword in service_context for keyword in keywords):
+            total = hours * hourly_rate
+            hours_text = f"{hours:g}"
+            total_text = f"{total:,.0f}" if total.is_integer() else f"{total:,.2f}"
+            extra_note = (
+                " ราคานี้เป็นเครดิตคอมพิวเตอร์และยังไม่รวมเครดิตพื้นที่ค่ะ"
+                if service_name == "คอมพิวเตอร์" else
+                " ราคานี้เป็นเครดิตบริการแยกจากเครดิตพื้นที่ค่ะ"
+            )
+            return (
+                f"ค่าเช่า{service_name} {hours_text} ชั่วโมง = "
+                f"{hours_text} × {hourly_rate} = **{total_text} บาท** ค่ะ"
+                f"{extra_note}"
+            )
+    return None
 
 
 def get_api_key() -> str | None:
@@ -342,7 +385,12 @@ def main():
         with st.chat_message("assistant"):
             with st.spinner("Nova กำลังค้นข้อมูล..."):
                 context = retrieve_top_k(retrieval_query, model, index, chunks)
-                answer = generate_answer(query, context, conversation_history)
+                direct_answer = calculate_known_hourly_price(query, recent_messages)
+                answer = direct_answer or generate_answer(
+                    query,
+                    context,
+                    conversation_history,
+                )
             st.write(answer)
             with st.expander("ดูแหล่งข้อมูลที่ใช้อ้างอิง"):
                 for number, chunk in enumerate(context, 1):
