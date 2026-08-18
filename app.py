@@ -23,9 +23,10 @@ def load_index():
     with open(KNOWLEDGE_BASE_PATH, "r", encoding="utf-8") as file:
         document = file.read()
 
+    # แบ่งตามหัวข้อ Markdown เพื่อให้ชื่อหัวข้อและรายละเอียดอยู่ใน chunk เดียวกัน
     chunks = [
         chunk.strip()
-        for chunk in re.split(r"\n\s*\n", document)
+        for chunk in re.split(r"(?=^##\s+)", document, flags=re.MULTILINE)
         if chunk.strip()
     ]
     if not chunks:
@@ -53,7 +54,24 @@ def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 5) -> l
         normalize_embeddings=True,
     ).astype("float32")
     _, indices = index.search(query_embedding, min(k, len(chunks)))
-    return [chunks[idx] for idx in indices[0] if idx != -1]
+    semantic_results = [chunks[idx] for idx in indices[0] if idx != -1]
+
+    # คำถามโปรโมชันสั้น ๆ เช่น "มีโปรอะไร" มักมี semantic signal น้อย
+    # จึงดัน chunk สรุปโปรโมชันขึ้นเป็นอันดับแรก แล้วค่อยตามด้วยผล semantic
+    normalized_query = query.lower().strip()
+    promotion_keywords = ("โปร", "promotion", "ส่วนลด", "คูปอง", "สิทธิ์")
+    priority_results = []
+    if any(keyword in normalized_query for keyword in promotion_keywords):
+        priority_results = [
+            chunk for chunk in chunks
+            if "## สรุปโปรโมชันทั้งหมด" in chunk
+        ]
+
+    results = []
+    for chunk in priority_results + semantic_results:
+        if chunk not in results:
+            results.append(chunk)
+    return results[: max(k, 6 if priority_results else k)]
 
 
 def get_api_key() -> str | None:
