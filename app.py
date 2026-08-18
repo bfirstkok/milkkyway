@@ -64,6 +64,7 @@ def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 5) -> l
     knowledge_routes = [
         (("โปร", "promotion", "ส่วนลด", "คูปอง", "สิทธิ์"), "## สรุปโปรโมชันทั้งหมด"),
         (("เครดิต", "เวลาเหลือ", "หมดอายุ", "โอน", "คืนเงิน"), "## ระบบเครดิตเวลา"),
+        (("ราคา", "กี่บาท", "แพ็ก", "ชั่วโมง", "ชม.", "ชม "), "## แพ็กเกจที่นั่งทั่วไป"),
         (("check-in", "check out", "check-out", "เช็คอิน", "เช็คเอาท์", "qr", "ประตู"), "## ขั้นตอน Check-in และ Check-out"),
         (("คอม", "computer", "สเปก", "เล่นเกม", "โปรแกรม"), "## คอมพิวเตอร์ให้เช่า"),
         (("ที่อยู่", "อยู่ไหน", "แผนที่", "เปิดกี่โมง", "24 ชั่วโมง", "กลางคืน"), "## ที่ตั้งและเวลาเปิดบริการ"),
@@ -83,6 +84,40 @@ def retrieve_top_k(query: str, model, index, chunks: list[str], k: int = 5) -> l
         if chunk not in results:
             results.append(chunk)
     return results[: max(k, 6 if priority_results else k)]
+
+
+def build_retrieval_query(query: str, messages: list[dict]) -> str:
+    """Expand short follow-up questions with the previous user question."""
+    normalized = query.lower().strip()
+    follow_up_markers = (
+        "ถ้า", "แล้ว", "ล่ะ", "ละ", "อันนี้", "แบบนี้", "เท่าไหร่",
+        "กี่บาท", "เพิ่ม", "เอา ", "มัน", "ได้ไหม", "ได้มั้ย",
+    )
+    is_follow_up = len(normalized) <= 60 and any(
+        marker in normalized for marker in follow_up_markers
+    )
+    if not is_follow_up:
+        return query
+
+    previous_questions = [
+        message["content"]
+        for message in messages
+        if message.get("role") == "user" and message.get("content")
+    ]
+    if not previous_questions:
+        return query
+    return f"{previous_questions[-1]}\nคำถามต่อเนื่อง: {query}"
+
+
+def format_conversation_history(messages: list[dict]) -> str:
+    """Format a small recent window so Gemini can resolve follow-up wording."""
+    lines = []
+    for message in messages[-6:]:
+        role = "ลูกค้า" if message.get("role") == "user" else "Nova"
+        content = str(message.get("content", ""))[:1200]
+        if content:
+            lines.append(f"{role}: {content}")
+    return "\n".join(lines) or "ยังไม่มีบทสนทนาก่อนหน้า"
 
 
 def get_api_key() -> str | None:
@@ -121,7 +156,11 @@ def request_gemini(prompt: str, api_key: str) -> str:
     return response.text or ""
 
 
-def generate_answer(query: str, context_chunks: list[str]) -> str:
+def generate_answer(
+    query: str,
+    context_chunks: list[str],
+    conversation_history: str = "",
+) -> str:
     """Generate a grounded answer, falling back to retrieved facts on any outage."""
     api_key = get_api_key()
     if not api_key:
@@ -137,7 +176,12 @@ def generate_answer(query: str, context_chunks: list[str]) -> str:
 - ตอบเป็นภาษาเดียวกับผู้ใช้ ด้วยน้ำเสียงเป็นมิตร สุภาพ และกระชับ
 - ช่วยเปรียบเทียบแพ็กเกจหรือคำนวณค่าใช้บริการได้เมื่อ Context มีข้อมูลครบ
 - หากยังไม่มีระบบตรวจที่นั่งแบบเรียลไทม์ ให้แนะนำช่องทางยืนยันกับร้าน
+- ใช้บทสนทนาก่อนหน้าเพื่อทำความเข้าใจคำถามต่อเนื่อง เช่น "ถ้า 24 ชั่วโมงล่ะ"
+- หากคำถามต่อเนื่องยังคลุมเครือจนระบุบริการไม่ได้ ให้ถามกลับสั้น ๆ แทนการเดา
 - ถ้า Context ไม่มีคำตอบ ให้ตอบว่า "ขออภัย Nova ยังไม่พบข้อมูลนี้ในฐานความรู้ของ Milkkyway กรุณาติดต่อพนักงานเพื่อยืนยันค่ะ"
+
+บทสนทนาก่อนหน้า:
+{conversation_history}
 
 Context:
 {context}
@@ -288,14 +332,17 @@ def main():
     typed_query = st.chat_input("ถาม Nova เรื่องราคา โปรโมชัน แพ็กเกจ โซน หรือการจอง...")
     query = quick_query or typed_query
     if query:
+        recent_messages = st.session_state.messages[-6:]
+        retrieval_query = build_retrieval_query(query, recent_messages)
+        conversation_history = format_conversation_history(recent_messages)
         st.session_state.messages.append({"role": "user", "content": query})
         with st.chat_message("user"):
             st.write(query)
 
         with st.chat_message("assistant"):
             with st.spinner("Nova กำลังค้นข้อมูล..."):
-                context = retrieve_top_k(query, model, index, chunks)
-                answer = generate_answer(query, context)
+                context = retrieve_top_k(retrieval_query, model, index, chunks)
+                answer = generate_answer(query, context, conversation_history)
             st.write(answer)
             with st.expander("ดูแหล่งข้อมูลที่ใช้อ้างอิง"):
                 for number, chunk in enumerate(context, 1):
