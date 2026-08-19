@@ -1,0 +1,30 @@
+name: Keep Streamlit app awake
+
+on:
+  schedule:
+    # Streamlit Community Cloud sleeps after 12 hours without traffic.
+    # Visit every 6 hours to keep the inactivity window from expiring.
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-streamlit-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Visit Milkkyway Streamlit app
+        run: |
+          curl --fail --location --silent --show-error \
+            --max-time 120 \
+            --retry 3 \
+            --retry-delay 10 \
+            --user-agent "milkkyway-keep-alive/1.0" \
+            "https://milkkyway-9otlppbuxvcbph2sdn5v4t.streamlit.app/" \
+            --output /dev/null
